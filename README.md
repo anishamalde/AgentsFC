@@ -4,6 +4,8 @@ Orchestrate a squad of coding-agent sub-agents using nothing but markdown files.
 
 This is the "before" picture for the Agent FC talk: what multi-agent orchestration looks like when all you have is prompts and files. It works well for personal-sized tasks. When a task needs real gates, parallel verification and audits, graduate to a harness.
 
+Watch the talk (v1 of what we shared): https://www.youtube.com/watch?v=vss3ra7FKTE
+
 > The model is non-deterministic. Files can't fix that. A harness can.
 
 ## Why this exists

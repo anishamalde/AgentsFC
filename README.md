@@ -1,89 +1,128 @@
-# ⚽ Agent FC — File-Based Squad
+# ⚽ Agent FC: a file-based agent squad
 
-A simple file-based agent orchestration setup for the **Agent FC** talk. No harness, no runtime, no deployed infrastructure — just markdown files that a coding agent (Claude Code, Cursor, Cline, etc.) reads to adopt roles, coordinate, and produce an auditable trail.
+Orchestrate a squad of coding-agent sub-agents using nothing but markdown files. No harness, no runtime, no infrastructure. Point Claude Code, Cursor, Cline or similar at this folder and the agent adopts each role, coordinates through shared files, and leaves an audit trail you can read afterwards.
 
-This is the **before** in the talk's arc: how you'd orchestrate a squad of agents purely through prompts and files, when you don't have a harness. It works well for personal-shaped tasks. When the task becomes a real pipeline with gates and audits, you graduate to a harness.
+This is the "before" picture for the Agent FC talk: what multi-agent orchestration looks like when all you have is prompts and files. It works well for personal-sized tasks. When a task needs real gates, parallel verification and audits, graduate to a harness.
 
 > The model is non-deterministic. Files can't fix that. A harness can.
 
+## Why this exists
+
+- **Roles are files.** Each sub-agent has a single role file with its scope, rules and output shape.
+- **State is files.** Shared artifacts carry the match from kick-off to ship, so every decision is inspectable.
+- **The Manager coordinates, it doesn't do the work.** Only the Manager spawns sub-agents. Sub-agents never spawn each other.
+
 ## The squad
 
-The Manager is a coordinator. Every teammate is a **sub-agent** — a specialist spawned with its own role file, its own scope, and its own trace entry. Sub-agents don't spawn each other; only the Manager spawns them.
+**On the pitch: sub-agents that run the play**
 
-**On the pitch — sub-agents that run the play:**
-
-| File | Sub-agent | Lifecycle stage |
+| File | Role | Lifecycle stage |
 |---|---|---|
-| `manager.md` | The Manager (not a sub-agent — the coordinator). Sits off the pitch. This is what you paste in first. | Learn (owns the retro) |
-| `agents/captain.md` | On-pitch #10. Reads the game, retrieves grounded facts, writes the Game Plan. | Plan |
-| `agents/striker.md` | Produces the deliverable. The one creative sub-agent. | Build |
-| `agents/defender.md` | Adversarial critic. One lens at a time — spawn multiple Defender sub-agents in parallel with different lenses when the task calls for it. | Test |
-| `agents/goalkeeper.md` | Output-boundary gate. Ship or block. Always runs. | Ship |
+| `manager.md` | The Manager. The coordinator, off the pitch. Paste this in first. | Learn (owns the retro) |
+| `agents/captain.md` | Reads the task, retrieves grounded facts, writes the Game Plan. | Plan |
+| `agents/striker.md` | Produces the deliverable. The only creative sub-agent. | Build |
+| `agents/defender.md` | Adversarial critic, one lens per instance. Spawn several in parallel when needed. | Test |
+| `agents/goalkeeper.md` | Ship-or-block gate. Always runs. | Ship |
 
-**On the bench — sub-agent called on failure:**
+**On the bench: called on failure**
 
-| File | Sub-agent | When called |
+| File | Role | When called |
 |---|---|---|
-| `agents/physio.md` | Diagnoses and unblocks stuck sub-agents. Only enters when someone's down. | On failure (any stage) |
+| `agents/physio.md` | Diagnoses and unblocks stuck sub-agents. | Any stage, on failure |
 
 ## The match artifacts
 
-Five shared files carry state through the match. Every sub-agent knows which ones to read and write.
+Five shared files carry state through the match.
 
-| File | Purpose | Who writes | Who reads |
+| File | Purpose | Written by | Read by |
 |---|---|---|---|
-| `match-brief.md` | The team-talk before kick-off — task + constraints | User (or Manager on their behalf) before kick-off | Everyone, once |
-| `game-plan.md` | The Captain's tactical plan for this match | Captain, once per match | Striker, Defender, Goalkeeper, Manager |
-| `var.md` | The **VAR log** — one line per sub-agent turn | Everyone appends their turn | Everyone reads before their turn |
-| `manager-notebook.md` | Manager's touchline notepad — private reasoning | Manager only | Manager only |
-| `active-rules.md` | Touchline shouts — mid-match instructions from the user | User (mid-match) | Manager (checks every play) |
+| `match-brief.md` | Task and constraints, written before kick-off | User (or Manager on their behalf) | Everyone, once |
+| `game-plan.md` | The Captain's tactical plan | Captain, once per match | Striker, Defenders, Goalkeeper, Manager |
+| `var.md` | VAR log: one line per sub-agent turn | Everyone (append only) | Everyone |
+| `manager-notebook.md` | Manager's private reasoning | Manager only | Manager only |
+| `active-rules.md` | Mid-match instructions from the user | User | Manager, at the start of every play |
 
-That's it. Five files. Everything else — sub decisions, plays, retries — happens by sub-agents reading these files, appending to `var.md`, and returning control to the Manager.
-
-## How to run it
-
-1. Fill in `match-brief.md` with the task.
-2. Open your coding agent (Claude Code, Cursor, etc.) in this directory.
-3. Point it at `manager.md`:
-   > "Read `manager.md` and act as the Manager. Task is in `match-brief.md`."
-4. The Manager reads the sub-agent files as needed and coordinates them through the play.
-
-The Manager writes the trace as it goes. You can watch the play unfold in `var.md`.
-
-## The match, in one glance
+## How a match runs
 
 ```
-                        Kick-off
-                            │
-match-brief.md  ─┐          ▼
-active-rules.md ─┼─►  Manager  ─►  Captain writes game-plan.md
-                 │       │              ↓
-                 │       │         Striker builds
-                 │       │              ↓
-                 │       │        Defender(s) critique
-                 │       │              ↓
-                 │       │       Goalkeeper: ship or block
-                 │       ↓              ↓
-                 │  manager-notebook ← var.md (VAR log)
-                 │       ↓
-                 ▼   ship, sub, or red-card
-
-Physio: on the bench, waved on when a sub-agent goes down injured.
+                 Kick-off
+                    │
+match-brief.md ─┐   ▼
+active-rules.md ─┼─► Manager ─► Captain writes game-plan.md
+                 │      │              │
+                 │      │              ▼
+                 │      │           Striker builds
+                 │      │              │
+                 │      │              ▼
+                 │      │      Defender(s) critique
+                 │      │              │
+                 │      │              ▼
+                 │      │   Goalkeeper: ship or block
+                 │      ▼              │
+                 │  manager-notebook ◄─┤ var.md (VAR log)
+                 ▼                     ▼
+              ship, sub, or red card
+              
+Physio: on the bench, sent on when a sub-agent goes down.
 ```
 
-**Match-ending priorities in `active-rules.md`:**
-- **RED CARD** — match ends, result void
-- **MANAGER'S SHOUT** — urgent instruction, apply next turn
-- **HALF-TIME NOTE** — instruction to apply when it fits
+### Touchline shouts (`active-rules.md`)
+
+You can steer a running match without stopping it. Append an entry with one of these priorities:
+
+- **RED CARD**: end the match immediately. Nothing ships. The result is void.
+- **MANAGER'S SHOUT**: apply on the next sub-agent turn.
+- **HALF-TIME NOTE**: apply when it fits. Not urgent.
+
+Entries are never deleted. They stay as the audit trail.
+
+## Running it
+
+1. Fill in `match-brief.md` with your task, success criteria and constraints.
+2. Open your coding agent in this directory.
+3. Tell it:
+
+   > Read `manager.md` and act as the Manager. The task is in `match-brief.md`.
+
+4. Watch the play unfold in `var.md`.
+
+The Manager returns a short trace (who did what, in order, and whether the Goalkeeper shipped) and points you at `var.md` for the full detail.
+
+## Repo layout
+
+```
+.
+├── README.md              # you are here
+├── manager.md             # coordinator role (start here)
+├── match-brief.md         # your task goes here
+├── game-plan.md           # written by the Captain
+├── var.md                 # VAR log: the audit trail
+├── active-rules.md        # mid-match instructions
+├── manager-notebook.md    # Manager's private notes
+└── agents/
+    ├── captain.md
+    ├── striker.md
+    ├── defender.md
+    ├── goalkeeper.md
+    └── physio.md
+```
+
+## Limits
+
+- **Good for:** one-off personal tasks, prototyping a multi-agent workflow, learning how the roles interact.
+- **Not good for:** anything that needs deterministic gates, parallel verification, a durable audit store or multiple stakeholders.
+- **Ship policy is advisory.** The Goalkeeper is an LLM following a markdown rulebook, so it can be talked out of a block. A harness turns it into a real state-machine step.
 
 ## Where this ends and the harness begins
 
-- **This scaffold** — good for one-off personal tasks. The Manager holds the coordination in one conversation. VAR log is a plain markdown file. Ship policy is enforced by a hopeful Goalkeeper.
-- **A harness** — what you graduate to when you need parallel verification, deterministic gates, audit trails, or multiple stakeholders. The Goalkeeper becomes a real ship-or-block step in a state machine. VAR becomes a queryable trace store. The Manager (you, the human) intervenes via `waitForTaskToken`. See the talk outline for the escalation path.
+| | This scaffold | A harness |
+|---|---|---|
+| Coordination | One conversation, Manager holds state | State machine with explicit transitions |
+| Audit trail | Markdown file | Queryable trace store |
+| Ship gate | Hopeful Goalkeeper | Deterministic check |
+| Human in the loop | You, editing files | Approval step via task tokens |
 
-## References
+## Credits and references
 
-- [agentsparty.dev](https://agentsparty.dev) — the D&D-flavoured version of this pattern; where the file structure came from
-- [Kourtney Meiss's Pokemon system](https://dev.to/knmeiss/training-your-pokemon-my-ai-orchestration-system-k7p) — the shared journal + circuit-breaker pattern
-- Talk outline: `~/anishapm/AnishaAmazonObsidian/talks/agent-fc-talk-abstract.md`
-- `visualiser.md` — how we could put a website on top of this
+- [agentsparty.dev](https://agentsparty.dev): the D&D-flavoured version of this pattern, where the file structure started.
+- [Kourtney Meiss's Pokémon orchestration system](https://dev.to/knmeiss/training-your-pokemon-my-ai-orchestration-system-k7p): the shared journal and circuit-breaker pattern.
